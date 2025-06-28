@@ -207,7 +207,7 @@ function App() {
       {showConnectionTest ? (
         <div>
           <header className="App-header">
-            <h1>📚 Lovable Library - Connection Test</h1>
+            <h1>📚 IRB Library - Connection Test</h1>
             <button 
               onClick={() => setShowConnectionTest(false)}
               style={{
@@ -228,7 +228,7 @@ function App() {
       ) : (
         <>
           <header className="App-header">
-            <h1>📚 Lovable Library</h1>
+            <h1>📚 IRB Library</h1>
             <button onClick={testConnection} className="test-btn">
               🔌 Test Connection
             </button>
