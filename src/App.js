@@ -9,6 +9,10 @@ function App() {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('Not tested');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -57,6 +61,45 @@ function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      showNotification('Please enter a book name to search', 'error');
+      return;
+    }
+
+    setIsSearching(true);
+    setShowSearchResults(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('borrowings')
+        .select('*')
+        .ilike('book_name', `%${searchQuery.trim()}%`)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setSearchResults(data || []);
+      
+      if (data.length === 0) {
+        showNotification('No books found with that name', 'warning');
+      } else {
+        showNotification(`Found ${data.length} book(s)`, 'success');
+      }
+    } catch (error) {
+      showNotification(`Search error: ${error.message}`, 'error');
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearchResults(false);
   };
 
   const handleInputChange = (e) => {
@@ -229,28 +272,107 @@ function App() {
         <>
           <header className="App-header">
             <h1>📚 IRB Library</h1>
-            <button onClick={testConnection} className="test-btn">
-              🔌 Test Connection
-            </button>
-            <button 
-              onClick={() => setShowConnectionTest(true)}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#007bff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: 'pointer',
-                marginLeft: '10px'
-              }}
-            >
-              🔧 Connection Test
-            </button>
+            <div className="header-controls">
+              <div className="search-container">
+                <input
+                  type="text"
+                  placeholder="Search by book name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  className="search-input"
+                />
+                <button 
+                  onClick={handleSearch}
+                  disabled={isSearching}
+                  className="search-btn"
+                >
+                  {isSearching ? '🔍 Searching...' : '🔍 Search'}
+                </button>
+                {showSearchResults && (
+                  <button 
+                    onClick={clearSearch}
+                    className="clear-search-btn"
+                  >
+                    ✕ Clear
+                  </button>
+                )}
+              </div>
+              <div className="header-buttons">
+                <button onClick={testConnection} className="test-btn">
+                  🔌 Test Connection
+                </button>
+                <button 
+                  onClick={() => setShowConnectionTest(true)}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#007bff',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    marginLeft: '10px'
+                  }}
+                >
+                  🔧 Connection Test
+                </button>
+              </div>
+            </div>
           </header>
 
           <div className={`connection-status ${connectionStatus.includes('✅') ? 'success' : 'error'}`}>
             <span>{connectionStatus}</span>
           </div>
+
+          {showSearchResults && (
+            <div className="search-results-section">
+              <h2>🔍 Search Results for "{searchQuery}"</h2>
+              {isSearching ? (
+                <div className="loading">Searching...</div>
+              ) : searchResults.length === 0 ? (
+                <div className="no-results">No books found with that name</div>
+              ) : (
+                <div className="search-results">
+                  <div className="results-summary">
+                    Found {searchResults.length} book(s)
+                  </div>
+                  <div className="entries-list">
+                    {searchResults.map((entry) => (
+                      <div key={entry.id} className="entry-card search-result-card">
+                        <div className="entry-header">
+                          <h3>{entry.name}</h3>
+                          <div className="entry-actions">
+                            <button 
+                              onClick={() => handleEdit(entry)}
+                              className="edit-btn"
+                            >
+                              ✏️ Edit
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(entry.id)}
+                              className="delete-btn"
+                            >
+                              🗑️ Delete
+                            </button>
+                          </div>
+                        </div>
+                        <div className="entry-details">
+                          <p><strong>Book:</strong> {entry.book_name}</p>
+                          <p><strong>Phone:</strong> {entry.phone}</p>
+                          <p><strong>GL No:</strong> {entry.gl_no}</p>
+                          <p><strong>Date Taken:</strong> {format(new Date(entry.date_taken), 'yyyy-MM-dd')}</p>
+                          <p className={isOverdue(entry.due_date) ? 'overdue' : ''}>
+                            <strong>Due:</strong> {format(new Date(entry.due_date), 'yyyy-MM-dd')}
+                            {isOverdue(entry.due_date) && ' (OVERDUE!)'}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="container">
             <div className="form-section">
