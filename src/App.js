@@ -2,10 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import { format, addDays } from 'date-fns';
 import SupabaseTest from './SupabaseTest';
+import SignIn from './SignIn';
+import RegisterAdmin from './RegisterAdmin';
 import './App.css';
 
 function App() {
+  const [user, setUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
   const [showConnectionTest, setShowConnectionTest] = useState(true);
+  const [showRegisterAdmin, setShowRegisterAdmin] = useState(false);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('Not tested');
@@ -20,9 +25,67 @@ function App() {
   const [editingEntry, setEditingEntry] = useState(null);
 
   useEffect(() => {
-    testConnection();
-    loadEntries();
+    // Check for existing session
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setUser(session.user);
+        await loadUserProfile(session.user.id);
+      }
+    };
+    
+    getSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session) {
+          setUser(session.user);
+          await loadUserProfile(session.user.id);
+        } else {
+          setUser(null);
+          setUserProfile(null);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      testConnection();
+      loadEntries();
+    }
+  }, [user]);
+
+  const loadUserProfile = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error loading user profile:', error);
+      } else if (data) {
+        setUserProfile(data);
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+    }
+  };
+
+  const handleSignIn = (user) => {
+    setUser(user);
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setUserProfile(null);
+  };
 
   const testConnection = async () => {
     setConnectionStatus('Testing...');
@@ -204,24 +267,60 @@ function App() {
 
   return (
     <div className="App">
-      {showConnectionTest ? (
+      {!user ? (
+        <SignIn onSignIn={handleSignIn} />
+      ) : showRegisterAdmin ? (
+        <RegisterAdmin onBack={() => setShowRegisterAdmin(false)} />
+      ) : showConnectionTest ? (
         <div>
           <header className="App-header">
             <h1>📚 IRB Library - Connection Test</h1>
-            <button 
-              onClick={() => setShowConnectionTest(false)}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: 'pointer',
-                marginLeft: '10px'
-              }}
-            >
-              🏠 Go to Main App
-            </button>
+            <div className="header-buttons">
+              <button 
+                onClick={() => setShowConnectionTest(false)}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#28a745',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  marginLeft: '10px'
+                }}
+              >
+                🏠 Go to Main App
+              </button>
+              {userProfile?.role === 'admin' && (
+                <button 
+                  onClick={() => setShowRegisterAdmin(true)}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#17a2b8',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    marginLeft: '10px'
+                  }}
+                >
+                  👤 Create User
+                </button>
+              )}
+              <button 
+                onClick={handleSignOut}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  marginLeft: '10px'
+                }}
+              >
+                🚪 Sign Out
+              </button>
+            </div>
           </header>
           <SupabaseTest />
         </div>
@@ -229,24 +328,62 @@ function App() {
         <>
           <header className="App-header">
             <h1>📚 IRB Library</h1>
-            <button onClick={testConnection} className="test-btn">
-              🔌 Test Connection
-            </button>
-            <button 
-              onClick={() => setShowConnectionTest(true)}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#007bff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: 'pointer',
-                marginLeft: '10px'
-              }}
-            >
-              🔧 Connection Test
-            </button>
+            <div className="header-buttons">
+              <button onClick={testConnection} className="test-btn">
+                🔌 Test Connection
+              </button>
+              <button 
+                onClick={() => setShowConnectionTest(true)}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  marginLeft: '10px'
+                }}
+              >
+                🔧 Connection Test
+              </button>
+              {userProfile?.role === 'admin' && (
+                <button 
+                  onClick={() => setShowRegisterAdmin(true)}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#17a2b8',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    marginLeft: '10px'
+                  }}
+                >
+                  👤 Create User
+                </button>
+              )}
+              <button 
+                onClick={handleSignOut}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  marginLeft: '10px'
+                }}
+              >
+                🚪 Sign Out
+              </button>
+            </div>
           </header>
+
+          {userProfile && (
+            <div className="user-info">
+              <span>Welcome, {userProfile.email} ({userProfile.role})</span>
+            </div>
+          )}
 
           <div className={`connection-status ${connectionStatus.includes('✅') ? 'success' : 'error'}`}>
             <span>{connectionStatus}</span>
