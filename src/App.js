@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import { format, addDays } from 'date-fns';
-import SupabaseTest from './SupabaseTest';
 import './App.css';
 
 function App() {
-  const [showConnectionTest, setShowConnectionTest] = useState(true);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('Not tested');
@@ -278,263 +276,62 @@ function App() {
 
   return (
     <div className="App">
-      {showConnectionTest ? (
-        <div>
-          <header className="App-header">
-            <h1>📚 IRB Library - Connection Test</h1>
-            <button 
-              onClick={() => setShowConnectionTest(false)}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: 'pointer',
-                marginLeft: '10px'
-              }}
-            >
-              🏠 Go to Main App
-            </button>
-          </header>
-          <SupabaseTest />
-        </div>
-      ) : (
-        <>
-          <header className="App-header">
-            <h1>📚 IRB Library</h1>
-            <div className="header-controls">
-              <div className="search-container">
-                <input
-                  type="text"
-                  placeholder="Search by book name..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                  className="search-input"
-                />
+      <>
+        <header className="App-header">
+          <h1>📚 IRB Library</h1>
+          <div className="header-controls">
+            <div className="search-container">
+              <input
+                type="text"
+                placeholder="Search by book name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                className="search-input"
+              />
+              <button 
+                onClick={handleSearch}
+                disabled={isSearching}
+                className="search-btn"
+              >
+                {isSearching ? '🔍 Searching...' : '🔍 Search'}
+              </button>
+              {showSearchResults && (
                 <button 
-                  onClick={handleSearch}
-                  disabled={isSearching}
-                  className="search-btn"
+                  onClick={clearSearch}
+                  className="clear-search-btn"
                 >
-                  {isSearching ? '🔍 Searching...' : '🔍 Search'}
+                  ✕ Clear
                 </button>
-                {showSearchResults && (
-                  <button 
-                    onClick={clearSearch}
-                    className="clear-search-btn"
-                  >
-                    ✕ Clear
-                  </button>
-                )}
-              </div>
-              <div className="header-buttons">
-                <button onClick={testConnection} className="test-btn">
-                  🔌 Test Connection
-                </button>
-                <button 
-                  onClick={() => setShowConnectionTest(true)}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '5px',
-                    cursor: 'pointer',
-                    marginLeft: '10px'
-                  }}
-                >
-                  🔧 Connection Test
-                </button>
-              </div>
-            </div>
-          </header>
-
-          <div className={`connection-status ${connectionStatus.includes('✅') ? 'success' : 'error'}`}>
-            <span>{connectionStatus}</span>
-          </div>
-
-          {showSearchResults && (
-            <div className="search-results-section">
-              <h2>🔍 Search Results for "{searchQuery}"</h2>
-              {isSearching ? (
-                <div className="loading">Searching...</div>
-              ) : searchResults.length === 0 ? (
-                <div className="no-results">No books found with that name</div>
-              ) : (
-                <div className="search-results">
-                  <div className="results-summary">
-                    Found {searchResults.length} book(s)
-                  </div>
-                  <div className="entries-list">
-                    {searchResults.map((entry) => (
-                      <div key={entry.id} className="entry-card search-result-card">
-                        <div className="entry-header">
-                          <h3>{entry.name}</h3>
-                          <div className="entry-actions">
-                            <button 
-                              onClick={() => handleEdit(entry)}
-                              className="edit-btn"
-                            >
-                              ✏️ Edit
-                            </button>
-                            <button 
-                              onClick={() => handleDelete(entry.id)}
-                              className="delete-btn"
-                            >
-                              🗑️ Delete
-                            </button>
-                          </div>
-                        </div>
-                        <div className="entry-details">
-                          <p><strong>Book:</strong> {entry.book_name}</p>
-                          <p><strong>Phone:</strong> {entry.phone}</p>
-                          <p><strong>GL No:</strong> {entry.gl_no}</p>
-                          <p><strong>Date Taken:</strong> {format(new Date(entry.date_taken), 'yyyy-MM-dd')}</p>
-                          <p className={isOverdue(entry.due_date) ? 'overdue' : ''}>
-                            <strong>Due:</strong> {format(new Date(entry.due_date), 'yyyy-MM-dd')}
-                            {isOverdue(entry.due_date) && ' (OVERDUE!)'}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
               )}
             </div>
-          )}
-
-          <div className="container">
-            <div className="form-section">
-              <h2>{editingEntry ? 'Edit Entry' : 'Add New Borrowing'}</h2>
-              <form onSubmit={editingEntry ? handleUpdate : handleSubmit}>
-                <div className="form-group">
-                  <label>Name *</label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Phone *</label>
-                  <input
-                    type="text"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Book Name *</label>
-                  <input
-                    type="text"
-                    name="bookName"
-                    value={formData.bookName}
-                    onChange={handleInputChange}
-                    onFocus={() => formData.bookName && setShowSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                    autoComplete="off"
-                    required
-                  />
-                  {showSuggestions && bookSuggestions.length > 0 && (
-                    <ul className="suggestions-dropdown">
-                      {suggestionLoading ? (
-                        <li className="loading">Loading...</li>
-                      ) : (
-                        bookSuggestions.map((suggestion, idx) => (
-                          <li
-                            key={idx}
-                            onMouseDown={() => {
-                              setFormData(prev => ({ ...prev, bookName: suggestion }));
-                              setShowSuggestions(false);
-                            }}
-                            className="suggestion-item"
-                          >
-                            {suggestion}
-                          </li>
-                        ))
-                      )}
-                    </ul>
-                  )}
-                </div>
-
-                <div className="form-group">
-                  <label>GL No *</label>
-                  <input
-                    type="text"
-                    name="glNo"
-                    value={formData.glNo}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Date Taken *</label>
-                  <input
-                    type="date"
-                    name="dateTaken"
-                    value={formData.dateTaken}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Due Date (Auto-calculated)</label>
-                  <input
-                    type="date"
-                    name="dueDate"
-                    value={formData.dueDate}
-                    readOnly
-                    className="readonly"
-                  />
-                </div>
-
-                <div className="form-actions">
-                  <button type="submit" className="submit-btn">
-                    {editingEntry ? 'Update' : 'Submit'}
-                  </button>
-                  {editingEntry && (
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        setEditingEntry(null);
-                        setFormData({
-                          name: '',
-                          phone: '',
-                          bookName: '',
-                          glNo: '',
-                          dateTaken: '',
-                          dueDate: ''
-                        });
-                      }}
-                      className="cancel-btn"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              </form>
+            <div className="header-buttons">
+              <button onClick={testConnection} className="test-btn">
+                🔌 Test Connection
+              </button>
             </div>
+          </div>
+        </header>
 
-            <div className="entries-section">
-              <h2>All Entries</h2>
-              {loading ? (
-                <div className="loading">Loading...</div>
-              ) : entries.length === 0 ? (
-                <div className="no-entries">No entries found</div>
-              ) : (
+        <div className={`connection-status ${connectionStatus.includes('✅') ? 'success' : 'error'}`}>
+          <span>{connectionStatus}</span>
+        </div>
+
+        {showSearchResults && (
+          <div className="search-results-section">
+            <h2>🔍 Search Results for "{searchQuery}"</h2>
+            {isSearching ? (
+              <div className="loading">Searching...</div>
+            ) : searchResults.length === 0 ? (
+              <div className="no-results">No books found with that name</div>
+            ) : (
+              <div className="search-results">
+                <div className="results-summary">
+                  Found {searchResults.length} book(s)
+                </div>
                 <div className="entries-list">
-                  {entries.map((entry) => (
-                    <div key={entry.id} className="entry-card">
+                  {searchResults.map((entry) => (
+                    <div key={entry.id} className="entry-card search-result-card">
                       <div className="entry-header">
                         <h3>{entry.name}</h3>
                         <div className="entry-actions">
@@ -556,6 +353,7 @@ function App() {
                         <p><strong>Book:</strong> {entry.book_name}</p>
                         <p><strong>Phone:</strong> {entry.phone}</p>
                         <p><strong>GL No:</strong> {entry.gl_no}</p>
+                        <p><strong>Date Taken:</strong> {format(new Date(entry.date_taken), 'yyyy-MM-dd')}</p>
                         <p className={isOverdue(entry.due_date) ? 'overdue' : ''}>
                           <strong>Due:</strong> {format(new Date(entry.due_date), 'yyyy-MM-dd')}
                           {isOverdue(entry.due_date) && ' (OVERDUE!)'}
@@ -564,11 +362,174 @@ function App() {
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-        </>
-      )}
+        )}
+
+        <div className="container">
+          <div className="form-section">
+            <h2>{editingEntry ? 'Edit Entry' : 'Add New Borrowing'}</h2>
+            <form onSubmit={editingEntry ? handleUpdate : handleSubmit}>
+              <div className="form-group">
+                <label>Name *</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Phone *</label>
+                <input
+                  type="text"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Book Name *</label>
+                <input
+                  type="text"
+                  name="bookName"
+                  value={formData.bookName}
+                  onChange={handleInputChange}
+                  onFocus={() => formData.bookName && setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                  autoComplete="off"
+                  required
+                />
+                {showSuggestions && bookSuggestions.length > 0 && (
+                  <ul className="suggestions-dropdown">
+                    {suggestionLoading ? (
+                      <li className="loading">Loading...</li>
+                    ) : (
+                      bookSuggestions.map((suggestion, idx) => (
+                        <li
+                          key={idx}
+                          onMouseDown={() => {
+                            setFormData(prev => ({ ...prev, bookName: suggestion }));
+                            setShowSuggestions(false);
+                          }}
+                          className="suggestion-item"
+                        >
+                          {suggestion}
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label>GL No *</label>
+                <input
+                  type="text"
+                  name="glNo"
+                  value={formData.glNo}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Date Taken *</label>
+                <input
+                  type="date"
+                  name="dateTaken"
+                  value={formData.dateTaken}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Due Date (Auto-calculated)</label>
+                <input
+                  type="date"
+                  name="dueDate"
+                  value={formData.dueDate}
+                  readOnly
+                  className="readonly"
+                />
+              </div>
+
+              <div className="form-actions">
+                <button type="submit" className="submit-btn">
+                  {editingEntry ? 'Update' : 'Submit'}
+                </button>
+                {editingEntry && (
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      setEditingEntry(null);
+                      setFormData({
+                        name: '',
+                        phone: '',
+                        bookName: '',
+                        glNo: '',
+                        dateTaken: '',
+                        dueDate: ''
+                      });
+                    }}
+                    className="cancel-btn"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+
+          <div className="entries-section">
+            <h2>All Entries</h2>
+            {loading ? (
+              <div className="loading">Loading...</div>
+            ) : entries.length === 0 ? (
+              <div className="no-entries">No entries found</div>
+            ) : (
+              <div className="entries-list">
+                {entries.map((entry) => (
+                  <div key={entry.id} className="entry-card">
+                    <div className="entry-header">
+                      <h3>{entry.name}</h3>
+                      <div className="entry-actions">
+                        <button 
+                          onClick={() => handleEdit(entry)}
+                          className="edit-btn"
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(entry.id)}
+                          className="delete-btn"
+                        >
+                          🗑️ Delete
+                        </button>
+                      </div>
+                    </div>
+                    <div className="entry-details">
+                      <p><strong>Book:</strong> {entry.book_name}</p>
+                      <p><strong>Phone:</strong> {entry.phone}</p>
+                      <p><strong>GL No:</strong> {entry.gl_no}</p>
+                      <p className={isOverdue(entry.due_date) ? 'overdue' : ''}>
+                        <strong>Due:</strong> {format(new Date(entry.due_date), 'yyyy-MM-dd')}
+                        {isOverdue(entry.due_date) && ' (OVERDUE!)'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </>
     </div>
   );
 }
