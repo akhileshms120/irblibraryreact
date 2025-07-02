@@ -22,6 +22,9 @@ function App() {
     dueDate: ''
   });
   const [editingEntry, setEditingEntry] = useState(null);
+  const [bookSuggestions, setBookSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
 
   useEffect(() => {
     testConnection();
@@ -102,6 +105,30 @@ function App() {
     setShowSearchResults(false);
   };
 
+  const fetchBookSuggestions = async (query) => {
+    if (!query.trim()) {
+      setBookSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    setSuggestionLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('library')
+        .select('NAME_OF_BOOK')
+        .ilike('NAME_OF_BOOK', `%${query.trim()}%`)
+        .limit(10);
+      if (error) throw error;
+      setBookSuggestions(data ? data.map(row => row['NAME_OF_BOOK']) : []);
+      setShowSuggestions(true);
+    } catch (error) {
+      setBookSuggestions([]);
+      setShowSuggestions(false);
+    } finally {
+      setSuggestionLoading(false);
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -116,6 +143,10 @@ function App() {
         ...prev,
         dueDate: format(dueDate, 'yyyy-MM-dd')
       }));
+    }
+    // Fetch suggestions for bookName
+    if (name === 'bookName') {
+      fetchBookSuggestions(value);
     }
   };
 
@@ -407,8 +438,31 @@ function App() {
                     name="bookName"
                     value={formData.bookName}
                     onChange={handleInputChange}
+                    onFocus={() => formData.bookName && setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                    autoComplete="off"
                     required
                   />
+                  {showSuggestions && bookSuggestions.length > 0 && (
+                    <ul className="suggestions-dropdown">
+                      {suggestionLoading ? (
+                        <li className="loading">Loading...</li>
+                      ) : (
+                        bookSuggestions.map((suggestion, idx) => (
+                          <li
+                            key={idx}
+                            onMouseDown={() => {
+                              setFormData(prev => ({ ...prev, bookName: suggestion }));
+                              setShowSuggestions(false);
+                            }}
+                            className="suggestion-item"
+                          >
+                            {suggestion}
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  )}
                 </div>
 
                 <div className="form-group">
